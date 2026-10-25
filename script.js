@@ -1,14 +1,11 @@
 // =================================================================
-// 1. البيانات الافتراضية وهيكل التخزين
+// 1. البيانات الافتراضية وهيكل التخزين (تم تفريغ المواد الافتراضية)
 // =================================================================
-var defaultSubjects = [
-    { id: 'cpp', name: 'لغة C++', icon: '⚡️' },
-    { id: 'python', name: 'لغة Python', icon: '🐍' }
-];
+var defaultSubjects = []; // فارغة تماماً لتبدأ المنصة نظيفة
 
 var subjectsList = JSON.parse(localStorage.getItem('my_app_subjects')) || defaultSubjects;
-var dataStore = JSON.parse(localStorage.getItem('my_app_dataStore')) || { cpp: [], python: [] };
-var notesStore = JSON.parse(localStorage.getItem('my_app_notesStore')) || { cpp: [], python: [] };
+var dataStore = JSON.parse(localStorage.getItem('my_app_dataStore')) || {};
+var notesStore = JSON.parse(localStorage.getItem('my_app_notesStore')) || {};
 
 var currentSubjectId = null;
 
@@ -51,13 +48,16 @@ otherMenuItems.forEach(function(item) {
     });
 });
 
-document.getElementById('back-from-detail-btn').addEventListener('click', function() {
-    var activeMenu = document.querySelector('.menu-item.active');
-    if (activeMenu) activeMenu.classList.remove('active');
-    menuHomeBtn.classList.add('active');
-    showScreen('subjects-screen');
-    renderSubjectsGrid();
-});
+var backBtn = document.getElementById('back-from-detail-btn');
+if (backBtn) {
+    backBtn.addEventListener('click', function() {
+        var activeMenu = document.querySelector('.menu-item.active');
+        if (activeMenu) activeMenu.classList.remove('active');
+        if (menuHomeBtn) menuHomeBtn.classList.add('active');
+        showScreen('subjects-screen');
+        renderSubjectsGrid();
+    });
+}
 
 // =================================================================
 // 3. بناء شبكة المواد وتوليد المواد ديناميكياً
@@ -69,6 +69,11 @@ function renderSubjectsGrid() {
     if (!subjectsGrid) return;
     subjectsGrid.innerHTML = "";
 
+    if (subjectsList.length === 0) {
+        subjectsGrid.innerHTML = '<p style="color: #94a3b8; grid-column: 1/-1; text-align: center; padding: 40px 0;">لا توجد مواد دراسية مضافة بعد. اضغطي على زر "إضافة مادة جديدة" للبدء!</p>';
+        return;
+    }
+
     subjectsList.forEach(function(sub) {
         var lessons = dataStore[sub.id] || [];
         var total = lessons.length;
@@ -78,7 +83,7 @@ function renderSubjectsGrid() {
         var card = document.createElement('div');
         card.className = 'main-subject-card';
         card.innerHTML =
-            '<button class="delete-subject-btn" title="حذف المادة">🗑️</button>' +
+            '<button class="delete-subject-btn" title="حذف المادة">🗑</button>' +
             '<div class="card-icon">' + sub.icon + '</div>' +
             '<h3>' + sub.name + '</h3>' +
             '<p class="card-stats">إنجاز ' + done + ' من ' + total + ' دروس</p>' +
@@ -86,21 +91,24 @@ function renderSubjectsGrid() {
             '<div class="progress-fill" style="width: ' + percentage + '%;"></div>' +
             '</div>' +
             '<span class="pct-text">' + percentage + '%</span>';
-
         card.addEventListener('click', function(e) {
             if (e.target.classList.contains('delete-subject-btn')) return;
             openSubjectDetail(sub);
         });
-        card.querySelector('.delete-subject-btn').addEventListener('click', function(e) {
-            e.stopPropagation();
-            if (confirm("هل أنتِ تأكدة من حذف مادة (" + sub.name + ") وكل دروسها وملاحظاتها؟")) {
-                subjectsList = subjectsList.filter(function(s) { return s.id !== sub.id; });
-                delete dataStore[sub.id];
-                delete notesStore[sub.id];
-                saveAllToLocalStorage();
-                renderSubjectsGrid();
-            }
-        });
+
+        var deleteBtn = card.querySelector('.delete-subject-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (confirm("هل أنتِ متأكدة من حذف مادة (" + sub.name + ") وكل دروسها وملاحظاتها؟")) {
+                    subjectsList = subjectsList.filter(function(s) { return s.id !== sub.id; });
+                    delete dataStore[sub.id];
+                    delete notesStore[sub.id];
+                    saveAllToLocalStorage();
+                    renderSubjectsGrid();
+                }
+            });
+        }
 
         subjectsGrid.appendChild(card);
     });
@@ -131,7 +139,8 @@ if (addSubjectBtn) {
 // =================================================================
 function openSubjectDetail(sub) {
     currentSubjectId = sub.id;
-    document.getElementById('detail-subject-title').innerText = "دروس ومحاضرات " + sub.name;
+    var titleElem = document.getElementById('detail-subject-title');
+    if (titleElem) titleElem.innerText = "دروس ومحاضرات " + sub.name;
     closeViewer();
     renderDetailLessons();
     renderDetailNotes();
@@ -148,71 +157,83 @@ function getYouTubeEmbedUrl(url) {
     return null;
 }
 
-document.getElementById('detail-add-lesson-btn').addEventListener('click', function() {
-    if (!currentSubjectId) return;
-    var title = prompt("ادخلي اسم أو عنوان الدرس الجديد:");
-    if (title && title.trim() !== "") {
+var addLessonBtn = document.getElementById('detail-add-lesson-btn');
+if (addLessonBtn) {
+    addLessonBtn.addEventListener('click', function() {
+        if (!currentSubjectId) return;
+        var title = prompt("ادخلي اسم أو عنوان الدرس الجديد:");
+        if (title && title.trim() !== "") {
+            if (!dataStore[currentSubjectId]) dataStore[currentSubjectId] = [];
+            dataStore[currentSubjectId].push({
+                id: Date.now(),
+                title: title.trim(),
+                fileUrl: null,
+                fileType: null,
+                completed: false
+            });
+            saveAllToLocalStorage();
+            renderDetailLessons();
+        }
+    });
+}
+
+var addYtBtn = document.getElementById('detail-add-yt-btn');
+if (addYtBtn) {
+    addYtBtn.addEventListener('click', function() {
+        if (!currentSubjectId) return;
+        var title = prompt("ادخلي عنوان الفيديو/المحاضرة:");
+        if (!title || title.trim() === "") return;
+
+        var ytUrl = prompt("الصقي رابط فيديو يوتيوب هنا:");
+        if (!ytUrl || ytUrl.trim() === "") return;
+
+        var embedUrl = getYouTubeEmbedUrl(ytUrl.trim());
+        if (!embedUrl) {
+            alert("⚠️ الرابط غير صحيح.");
+            return;
+        }
+
+        if (!dataStore[currentSubjectId]) dataStore[currentSubjectId] = [];
         dataStore[currentSubjectId].push({
             id: Date.now(),
             title: title.trim(),
-            fileUrl: null,
-            fileType: null,
+            fileUrl: embedUrl,
+            fileType: 'youtube',
             completed: false
         });
+
         saveAllToLocalStorage();
         renderDetailLessons();
-    }
-});
-
-document.getElementById('detail-add-yt-btn').addEventListener('click', function() {
-    if (!currentSubjectId) return;
-    var title = prompt("ادخلي عنوان الفيديو/المحاضرة:");
-    if (!title || title.trim() === "") return;
-
-    var ytUrl = prompt("الصقي رابط فيديو يوتيوب هنا:");
-    if (!ytUrl || ytUrl.trim() === "") return;
-
-    var embedUrl = getYouTubeEmbedUrl(ytUrl.trim());
-    if (!embedUrl) {
-        alert("⚠️ الرابط غير صحيح.");
-        return;
-    }
-
-    dataStore[currentSubjectId].push({
-        id: Date.now(),
-        title: title.trim(),
-        fileUrl: embedUrl,
-        fileType: 'youtube',
-        completed: false
     });
+}
+var fileInput = document.getElementById('detail-file-input');
+if (fileInput) {
+    fileInput.addEventListener('change', function(e) {
+        if (!currentSubjectId) return;
+        var files = e.target.files;
+        if (files.length === 0) return;
 
-    saveAllToLocalStorage();
-    renderDetailLessons();
-});
+        var file = files[0];
+        var objectUrl = URL.createObjectURL ? URL.createObjectURL(file) : "";
 
-document.getElementById('detail-file-input').addEventListener('change', function(e) {
-    if (!currentSubjectId) return;
-    var files = e.target.files;
-    if (files.length === 0) return;
+        if (!dataStore[currentSubjectId]) dataStore[currentSubjectId] = [];
+        dataStore[currentSubjectId].push({
+            id: Date.now(),
+            title: file.name,
+            fileUrl: objectUrl,
+            fileType: file.type,
+            completed: false
+        });
 
-    var file = files[0];
-    var objectUrl = URL.createObjectURL ? URL.createObjectURL(file) : "";
-
-    dataStore[currentSubjectId].push({
-        id: Date.now(),
-        title: file.name,
-        fileUrl: objectUrl,
-        fileType: file.type,
-        completed: false
+        saveAllToLocalStorage();
+        renderDetailLessons();
+        e.target.value = "";
     });
-
-    saveAllToLocalStorage();
-    renderDetailLessons();
-    e.target.value = "";
-});
+}
 
 function renderDetailLessons() {
     var listContainer = document.getElementById('detail-lessons-list');
+    if (!listContainer) return;
     listContainer.innerHTML = "";
     var list = dataStore[currentSubjectId] || [];
     list.forEach(function(lecture) {
@@ -226,7 +247,7 @@ function renderDetailLessons() {
             '<input type="checkbox" class="item-checkbox" ' + isChecked + '> ' +
             '<span class="clickable-title">' + icon + lecture.title + '</span>' +
             '</div>' +
-            '<button class="item-delete-btn" title="حذف">🗑️</button>';
+            '<button class="item-delete-btn" title="حذف">🗑</button>';
 
         li.querySelector('.clickable-title').addEventListener('click', function() {
             openInViewer(lecture);
@@ -235,7 +256,7 @@ function renderDetailLessons() {
         li.querySelector('.item-checkbox').addEventListener('change', function(e) {
             lecture.completed = e.target.checked;
             saveAllToLocalStorage();
-            renderSubjectsGrid(); // لتحديث النسبة المئوية في الصفحة الرئيسية مباشرة
+            renderSubjectsGrid();
         });
 
         li.querySelector('.item-delete-btn').addEventListener('click', function() {
@@ -251,9 +272,14 @@ function renderDetailLessons() {
 var viewerContainer = document.getElementById('viewer-container');
 var viewerTitle = document.getElementById('viewer-title');
 var viewerBody = document.getElementById('viewer-body');
-document.getElementById('close-viewer-btn').addEventListener('click', closeViewer);
+var closeViewerBtn = document.getElementById('close-viewer-btn');
+
+if (closeViewerBtn) {
+    closeViewerBtn.addEventListener('click', closeViewer);
+}
 
 function openInViewer(lecture) {
+    if (!viewerContainer || !viewerTitle || !viewerBody) return;
     viewerTitle.innerText = "👨‍💻 قيد الدراسة الآن: " + lecture.title;
     viewerBody.innerHTML = "";
 
@@ -276,19 +302,23 @@ function closeViewer() {
     if (viewerBody) viewerBody.innerHTML = "";
 }
 
-document.getElementById('detail-add-note-btn').addEventListener('click', function() {
-    if (!currentSubjectId) return;
-    var noteText = prompt("اكتبي مذكرتكِ السريعة هنا:");
-    if (noteText && noteText.trim() !== "") {
-        if (!notesStore[currentSubjectId]) notesStore[currentSubjectId] = [];
-        notesStore[currentSubjectId].push({ id: Date.now(), text: noteText.trim() });
-        saveAllToLocalStorage();
-        renderDetailNotes();
-    }
-});
+var addNoteBtn = document.getElementById('detail-add-note-btn');
+if (addNoteBtn) {
+    addNoteBtn.addEventListener('click', function() {
+        if (!currentSubjectId) return;
+        var noteText = prompt("اكتبي مذكرتكِ السريعة هنا:");
+        if (noteText && noteText.trim() !== "") {
+            if (!notesStore[currentSubjectId]) notesStore[currentSubjectId] = [];
+            notesStore[currentSubjectId].push({ id: Date.now(), text: noteText.trim() });
+            saveAllToLocalStorage();
+            renderDetailNotes();
+        }
+    });
+}
 
 function renderDetailNotes() {
     var notesContainer = document.getElementById('detail-notes-list');
+    if (!notesContainer) return;
     notesContainer.innerHTML = "";
     var list = notesStore[currentSubjectId] || [];
 
@@ -350,13 +380,13 @@ function renderScheduleGrid() {
                     '<strong>' + item.subject + '</strong>' +
                     '<span>⏰ ' + item.time + '</span>' +
                     '</div>' +
-                    '<button class="schedule-delete-btn" onclick="deleteScheduleItem(\'' + day + '\', ' + index + ')">🗑️</button>' +
+                    '<button class="schedule-delete-btn" onclick="deleteScheduleItem(\'' + day + '\', ' + index + ')">🗑</button>' +
                     '</li>';
             });
         }
 
         dayCol.innerHTML =
-            '<div class="day-header">🗓️ ' + day + '</div>' +
+            '<div class="day-header">🗓 ' + day + '</div>' +
             '<ul class="schedule-list">' + itemsHtml + '</ul>';
 
         gridContainer.appendChild(dayCol);
@@ -382,7 +412,6 @@ if (addScheduleBtn) {
 
         var subject = prompt("اسم المادة أو المحاضرة:");
         if (!subject || subject.trim() === "") return;
-
         var time = prompt("الوقت (مثال: 10:00 صباحاً):", "10:00 AM");
         if (!time || time.trim() === "") time = "غير محدد";
 
@@ -412,7 +441,7 @@ if (addTodoBtn && todoInput && todoList) {
         if (text !== "") {
             var li = document.createElement('li');
             li.className = 'todo-item-row';
-            li.innerHTML = '<span>🎯 ' + text + '</span><button class="delete-task-btn" style="background:#ef4444;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;">حذف 🗑️</button>';
+            li.innerHTML = '<span>🎯 ' + text + '</span><button class="delete-task-btn" style="background:#ef4444;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;">حذف 🗑</button>';
             li.querySelector('.delete-task-btn').addEventListener('click', function() { li.remove(); });
             todoList.appendChild(li);
             todoInput.value = "";
@@ -447,9 +476,9 @@ if (editorLangSelect && codeTextarea) {
 var pyodideInstance = null;
 async function getPyodideEngine() {
     if (!pyodideInstance && window.loadPyodide) {
-        consoleOutput.innerText = "⏳ جاري تهيئة محرك Python لأول مرة، يرجى الانتظار ثوانٍ معدودة...";
+        if (consoleOutput) consoleOutput.innerText = "⏳ جاري تهيئة محرك Python لأول مرة، يرجى الانتظار ثوانٍ معدودة...";
         pyodideInstance = await loadPyodide();
-        consoleOutput.innerText = "✅ محرك Python جاهز الآن! اضغطي \"تشغيل الكود\".";
+        if (consoleOutput) consoleOutput.innerText = "✅ محرك Python جاهز الآن! اضغطي \"تشغيل الكود\".";
     }
     return pyodideInstance;
 }
@@ -461,7 +490,7 @@ window.addEventListener('DOMContentLoaded', function() {
 if (runBtn && codeTextarea && consoleOutput) {
     runBtn.addEventListener('click', async function() {
         var code = codeTextarea.value;
-        var lang = editorLangSelect.value;
+        var lang = editorLangSelect ? editorLangSelect.value : 'python';
 
         if (lang === 'python') {
             try {
@@ -489,7 +518,6 @@ if (runBtn && codeTextarea && consoleOutput) {
             } catch (err) {
                 consoleOutput.innerText = "❌ خطأ في كود Python:\n" + err;
             }
-
         } else if (lang === 'js') {
             var oldLog = console.log;
             var logs = [];
@@ -551,7 +579,7 @@ if (startBtn) {
         if (!isRunning) {
             isRunning = true;
             startBtn.disabled = true;
-            pauseBtn.disabled = false;
+            if (pauseBtn) pauseBtn.disabled = false;
 
             timerInterval = setInterval(function() {
                 if (timeLeft > 0) {
@@ -561,7 +589,7 @@ if (startBtn) {
                     clearInterval(timerInterval);
                     isRunning = false;
                     startBtn.disabled = false;
-                    pauseBtn.disabled = true;
+                    if (pauseBtn) pauseBtn.disabled = true;
                     alert("⏰ انتهى الوقت! خذي استراحة الآن.");
                 }
             }, 1000);
@@ -574,7 +602,7 @@ if (pauseBtn) {
         if (isRunning) {
             clearInterval(timerInterval);
             isRunning = false;
-            startBtn.disabled = false;
+            if (startBtn) startBtn.disabled = false;
             pauseBtn.disabled = true;
         }
     });

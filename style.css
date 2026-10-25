@@ -574,35 +574,57 @@ body {
 
 
 /* =================================================================
-   تنسيقات التجاوب للموبايل (تضاف فقط في آخر الملف)
+   تنسيقات الشاشات الصغيرة والموبايل (Responsive Layout for Mobile)
    ================================================================= */
 
 @media screen and (max-width: 768px) {
+    /* تحويل اتجاه الصفحة من أفقي إلى عمودي */
     body {
         flex-direction: column !important;
-        overflow-x: hidden;
+        overflow-x: hidden !important;
     }
+    /* تحويل الشريط الجانبي إلى شريط علوي للموبايل */
     .sidebar {
         width: 100% !important;
         height: auto !important;
         position: relative !important;
+        padding: 10px !important;
+        box-shadow: none !important;
+        border-bottom: 1px solid #334155;
+    }
+    .sidebar .logo {
+        margin-bottom: 10px !important;
+        justify-content: center !important;
+        font-size: 18px !important;
     }
     .sidebar-menu {
-        display: flex !important;
+        flex-direction: row !important;
         flex-wrap: wrap !important;
         justify-content: center !important;
+        gap: 6px !important;
     }
-    .main-content,
-    .app-screen {
+    .sidebar-menu .menu-item {
+        font-size: 12px !important;
+        padding: 6px 10px !important;
+    }
+    /* ضبط المحتوى الرئيسي والمواد لتكون بعرض الشاشة الكامل */
+    .main-content {
         width: 100% !important;
-        padding: 15px !important;
-        box-sizing: border-box;
+        padding: 12px !important;
+        box-sizing: border-box !important;
     }
+    #subjects-grid {
+        grid-template-columns: 1fr !important;
+        /* عرض مادة واحدة في كل سطر للموبايل */
+        gap: 12px !important;
+    }
+    /* محرر الأكواد للموبايل */
     .editor-container {
         flex-direction: column !important;
     }
     #code-textarea,
     #console-output {
         width: 100% !important;
+        height: 220px !important;
     }
 }
